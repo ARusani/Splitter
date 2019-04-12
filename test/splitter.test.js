@@ -30,8 +30,8 @@ contract('Splitter', function(accounts) {
     [alice, bob, carol] = accounts;
   });
 
-  describe('#Splitter()', async () => {
-    describe('costructor', async () => {
+  describe('#Splitter()', () => {
+    describe('costructor', () => {
       it('should emit EventSplitterCreated', async () => {
         const splitterInstance = await Splitter.new(
             {from: alice}).should.be.fulfilled;
@@ -49,12 +49,12 @@ contract('Splitter', function(accounts) {
       });
     });
 
-    describe('Test Splitter Instance methods:', async () => {
+    describe('Test Splitter Instance methods:', () => {
       let splitterInstance;
 
       const amounts = [web3.utils.toWei('0.0001', 'ether'),
-        web3.utils.toWei('0.001', 'ether'),
-        web3.utils.toWei('0.01', 'ether'),
+        web3.utils.toWei('100', 'szabo'),
+        web3.utils.toWei('1', 'finney'),
         web3.utils.toWei('0.000000009', 'gwei'),
       ];
 
@@ -63,10 +63,10 @@ contract('Splitter', function(accounts) {
             {from: alice}).should.be.fulfilled;
       });
 
-      describe('#splitEthers()', async () => {
-        describe('allowed', async () => {
+      describe('#splitEthers()', () => {
+        describe('allowed', () => {
           amounts.forEach(function(value) {
-            it('Split amounts to beneficiary1 and beneficiary2, remainder to the owner', async () => {
+            it('split amounts to beneficiary1 and beneficiary2, remainder to the owner', async () => {
               const result = await splitterInstance.splitEthers( bob, carol,
                   {from: alice, value: value, gas: MAX_GAS});
 
@@ -92,9 +92,33 @@ contract('Splitter', function(accounts) {
               balanceCarol.should.be.eq.BN(halfExpected);
             });
           });
+          
+          it('split amounts correctly two times', async () => {
+            const value = amounts[2];
+            await splitterInstance.splitEthers( bob, carol,
+                {from: alice, value: value, gas: MAX_GAS})
+                .should.be.fulfilled;
+
+            await splitterInstance.splitEthers( bob, carol,
+                {from: alice, value: value, gas: MAX_GAS})
+                .should.be.fulfilled;
+
+            const valueBN = new BN(value);
+
+            const creditExpected = valueBN.div(new BN('2')).mul(new BN('2'));
+            const remExpected = valueBN.mod(new BN('2')).mul(new BN('2'));
+
+            const balanceAlice = await splitterInstance.credit(alice);
+            const balanceBob = await splitterInstance.credit(bob);
+            const balanceCarol = await splitterInstance.credit(carol);
+
+            balanceAlice.should.be.eq.BN(remExpected);
+            balanceBob.should.be.eq.BN(creditExpected);
+            balanceCarol.should.be.eq.BN(creditExpected);
+          });
         });
 
-        describe('fails', async () => {
+        describe('fails', () => {
           it('if not called by owner ', async () => {
             await web3.eth.expectedExceptionPromise(() => {
               return splitterInstance.splitEthers( alice, carol,
@@ -132,14 +156,7 @@ contract('Splitter', function(accounts) {
         });
       });
 
-      describe('#getTotalBalance()', async () => {
-        it('should returns zero after creation', async () => {
-          const totalBalance = await splitterInstance.getTotalBalance();
-          totalBalance.should.be.eq.BN(0);
-        });
-      });
-
-      describe('#withdraw()', async () => {
+      describe('#withdraw()', () => {
         it('should allow withdraw and emit EventWithdraw', async () => {
           const value = amounts[2];
 
@@ -154,18 +171,21 @@ contract('Splitter', function(accounts) {
           const preBobBalance = new BN(await web3.eth.getBalance(bob));
 
           const result = await splitterInstance.withdraw({from: bob, gas: MAX_GAS});
+          result.logs.length.should.be.equal(1);
+          result.logs[0].event.should.be.equal('EventWithdraw');
+          result.logs[0].args.caller.should.be.equal(bob);
+          result.logs[0].args.balance.should.be.eq.BN(halfExpected);
+
           const gasUsedWithdrawFunds = new BN(result.receipt.gasUsed);
-          const receipt = await web3.eth.getTransaction(result.tx);
-          const gasPriceWithdrawFunds = new BN(receipt.gasPrice);
+          const txObj = await web3.eth.getTransaction(result.tx);
+          const gasPriceWithdrawFunds = new BN(txObj.gasPrice);
           const totalGas = gasPriceWithdrawFunds.mul(gasUsedWithdrawFunds);
 
           const postBobBalance = new BN(await web3.eth.getBalance(bob));
           postBobBalance.should.be.eq.BN(preBobBalance.sub(totalGas).add(halfExpected));
 
-          result.logs.length.should.be.equal(1);
-          result.logs[0].event.should.be.equal('EventWithdraw');
-          result.logs[0].args.caller.should.be.equal(bob);
-          result.logs[0].args.balance.should.be.eq.BN(halfExpected);
+          const bobCreditLeft = await splitterInstance.credit(bob);
+          bobCreditLeft.should.be.eq.BN(0);
         });
 
         it('should fail if caller balance is zero', async () => {
@@ -189,7 +209,7 @@ contract('Splitter', function(accounts) {
         });
       });
 
-      describe('#()', async () => {
+      describe('#()', () => {
         accounts.forEach(function(address) {
           it(`should revert called from  (${address}) address`, async () => {
             await web3.eth.expectedExceptionPromise(() => {

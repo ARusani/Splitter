@@ -8,11 +8,11 @@ contract Splitter is Ownable {
     using SafeMath for uint256;
 
     event EventSplitterCreated(
-        address caller
+        address indexed caller
     );
 
     event EventEtherSplitted(
-        address caller,
+        address indexed caller,
         address beneficiary1,
         address beneficiary2,
         uint256 splittedValue,
@@ -20,7 +20,7 @@ contract Splitter is Ownable {
     );
 
     event EventWithdraw(
-        address caller,
+        address indexed caller,
         uint256 balance
     );
 
@@ -28,10 +28,6 @@ contract Splitter is Ownable {
 
     constructor () public {
         emit EventSplitterCreated(msg.sender);
-    }
-
-    function getTotalBalance() public view returns (uint256) {
-        return address(this).balance;
     }
 
     // whenever Alice sends ether to the contract for it to be split, 
@@ -53,21 +49,20 @@ contract Splitter is Ownable {
         if (splittedValue != 0) {
             credit[beneficiary1] = credit[beneficiary1].add(splittedValue);
             credit[beneficiary2] = credit[beneficiary2].add(splittedValue);
-        }   
 
-        emit EventEtherSplitted(msg.sender,beneficiary1, beneficiary2, splittedValue, remainder);
+            emit EventEtherSplitted(msg.sender,beneficiary1, beneficiary2, splittedValue, remainder);
+        }   
     }
 
-
     function withdraw() public {
-        require(credit[msg.sender] != 0);
+        uint256 aCredit = credit[msg.sender];
 
-        uint256 balance = credit[msg.sender];
+        require(aCredit != 0);
 
         credit[msg.sender] = 0;
         
-        msg.sender.transfer(balance);
+        emit EventWithdraw(msg.sender, aCredit);   
 
-        emit EventWithdraw(msg.sender, balance);   
-}
+        msg.sender.transfer(aCredit);
+    }
 }

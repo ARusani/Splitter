@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="X-UA-Compatible" content="ie=edge">
+        <title>Document</title>
+        <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/ethereum/web3.js/dist/web3.min.js"></script>
+    
+    </head>
+    <body>
+        <div>
+            <h1>Splitter</h1>
+            <h2>Contract Balance</h2>
+            <label for="contractBalance" class="col-lg-2 control-label">Total Ethers into the contract</label>
+            <input id="TotalBalance" type="text">
+        </div> 
+        <script>
+
+            if (typeof web3 !== 'undefined') {
+                web3 = new Web3(web3.currentProvider);
+            } else {
+                web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:9545"));
+            }
+            web3.eth.defaultAccount = web3.eth.accounts[0];
+            
+
+            var SplitterContract = web3.eth.contract([
+                                                        {
+                                                        "constant": false,
+                                                        "inputs": [],
+                                                        "name": "renounceOwnership",
+                                                        "outputs": [],
+                                                        "payable": false,
+                                                        "stateMutability": "nonpayable",
+                                                        "type": "function"
+                                                        },
+                                                        {
+                                                        "constant": true,
+                                                        "inputs": [],
+                                                        "name": "owner",
+                                                        "outputs": [
+                                                            {
+                                                            "name": "",
+                                                            "type": "address"
+                                                            }
+                                                        ],
+                                                        "payable": false,
+                                                        "stateMutability": "view",
+                                                        "type": "function"
+                                                        },
+                                                        {
+                                                        "constant": true,
+                                                        "inputs": [],
+                                                        "name": "isOwner",
+                                                        "outputs": [
+                                                            {
+                                                            "name": "",
+                                                            "type": "bool"
+                                                            }
+                                                        ],
+                                                        "payable": false,
+                                                        "stateMutability": "view",
+                                                        "type": "function"
+                                                        },
+                                                        {
+                                                        "constant": true,
+                                                        "inputs": [
+                                                            {
+                                                            "name": "",
+                                                            "type": "address"
+                                                            }
+                                                        ],
+                                                        "name": "credit",
+                                                        "outputs": [
+                                                            {
+                                                            "name": "",
+                                                            "type": "uint256"
+                                                            }
+                                                        ],
+                                                        "payable": false,
+                                                        "stateMutability": "view",
+                                                        "type": "function"
+                                                        },
+                                                        {
+                                                        "constant": false,
+                                                        "inputs": [
+                                                            {
+                                                            "name": "newOwner",
+                                                            "type": "address"
+                                                            }
+                                                        ],
+                                                        "name": "transferOwnership",
+                                                        "outputs": [],
+                                                        "payable": false,
+                                                        "stateMutability": "nonpayable",
+                                                        "type": "function"
+                                                        },
+                                                        {
+                                                        "inputs": [],
+                                                        "payable": false,
+                                                        "stateMutability": "nonpayable",
+                                                        "type": "constructor"
+                                                        },
+                                                        {
+                                                        "anonymous": false,
+                                                        "inputs": [
+                                                            {
+                                                            "indexed": true,
+                                                            "name": "caller",
+                                                            "type": "address"
+                                                            }
+                                                        ],
+                                                        "name": "EventSplitterCreated",
+                                                        "type": "event"
+                                                        },
+                                                        {
+                                                        "anonymous": false,
+                                                        "inputs": [
+                                                            {
+                                                            "indexed": true,
+                                                            "name": "caller",
+                                                            "type": "address"
+                                                            },
+                                                            {
+                                                            "indexed": false,
+                                                            "name": "beneficiary1",
+                                                            "type": "address"
+                                                            },
+                                                            {
+                                                            "indexed": false,
+                                                            "name": "beneficiary2",
+                                                            "type": "address"
+                                                            },
+                                                            {
+                                                            "indexed": false,
+                                                            "name": "splittedValue",
+                                                            "type": "uint256"
+                                                            },
+                                                            {
+                                                            "indexed": false,
+                                                            "name": "remainder",
+                                                            "type": "uint256"
+                                                            }
+                                                        ],
+                                                        "name": "EventEtherSplitted",
+                                                        "type": "event"
+                                                        },
+                                                        {
+                                                        "anonymous": false,
+                                                        "inputs": [
+                                                            {
+                                                            "indexed": true,
+                                                            "name": "caller",
+                                                            "type": "address"
+                                                            },
+                                                            {
+                                                            "indexed": false,
+                                                            "name": "balance",
+                                                            "type": "uint256"
+                                                            }
+                                                        ],
+                                                        "name": "EventWithdraw",
+                                                        "type": "event"
+                                                        },
+                                                        {
+                                                        "anonymous": false,
+                                                        "inputs": [
+                                                            {
+                                                            "indexed": true,
+                                                            "name": "previousOwner",
+                                                            "type": "address"
+                                                            },
+                                                            {
+                                                            "indexed": true,
+                                                            "name": "newOwner",
+                                                            "type": "address"
+                                                            }
+                                                        ],
+                                                        "name": "OwnershipTransferred",
+                                                        "type": "event"
+                                                        },
+                                                        {
+                                                        "constant": false,
+                                                        "inputs": [
+                                                            {
+                                                            "name": "beneficiary1",
+                                                            "type": "address"
+                                                            },
+                                                            {
+                                                            "name": "beneficiary2",
+                                                            "type": "address"
+                                                            }
+                                                        ],
+                                                        "name": "splitEthers",
+                                                        "outputs": [],
+                                                        "payable": true,
+                                                        "stateMutability": "payable",
+                                                        "type": "function"
+                                                        },
+                                                        {
+                                                        "constant": false,
+                                                        "inputs": [],
+                                                        "name": "withdraw",
+                                                        "outputs": [],
+                                                        "payable": false,
+                                                        "stateMutability": "nonpayable",
+                                                        "type": "function"
+                                                        }
+                                                    ]);
+            var SplitterAddress = '0xBaAbdBB6b41d3dC9AE18AE361452F9eedf90d679';
+            var splitterInstance = SplitterContract.at(SplitterAddress);
+            web3.eth.getBalance( SplitterAddress, function(error, result){
+                if(!error)
+                    {
+                        $("TotalBalance").html(result.toString());
+                        console.log(result.toString());
+                    }
+                else
+                    console.error(error);
+            });
+        </script>
+    </body>
+</html>
