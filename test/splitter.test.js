@@ -144,7 +144,8 @@ contract('Splitter', function(accounts) {
           const value = amounts[2];
 
           await splitterInstance.splitEthers( bob, carol,
-              {from: alice, value: value, gas: MAX_GAS});
+              {from: alice, value: value, gas: MAX_GAS})
+              .should.be.fulfilled;
 
           const valueBN = new BN(value);
 
@@ -174,8 +175,16 @@ contract('Splitter', function(accounts) {
         });
 
         it('should fail withdraws two times', async () => {
+
+          await splitterInstance.splitEthers( bob, carol,
+              {from: alice, value: amounts[2], gas: MAX_GAS})
+              .should.be.fulfilled;
+
+          await splitterInstance.withdraw({from: bob, gas: MAX_GAS})
+              .should.be.fulfilled;
+
           await web3.eth.expectedExceptionPromise(() => {
-            return splitterInstance.withdraw({from: alice, gas: MAX_GAS});
+            return splitterInstance.withdraw({from: bob, gas: MAX_GAS});
           }, MAX_GAS);
         });
       });
