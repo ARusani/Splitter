@@ -19,6 +19,11 @@ contract Splitter is Ownable {
         uint256 remainder
     );
 
+    event EventWithdraw(
+        address caller,
+        uint256 balance
+    );
+
     mapping(address => uint256) public credit;
 
     constructor () public {
@@ -53,8 +58,16 @@ contract Splitter is Ownable {
         emit EventEtherSplitted(msg.sender,beneficiary1, beneficiary2, splittedValue, remainder);
     }
 
-    
-    function() external payable {
-        revert();
-    }
+
+    function withdraw() public {
+        require(credit[msg.sender] != 0);
+
+        uint256 balance = credit[msg.sender];
+
+        credit[msg.sender] = 0;
+        
+        msg.sender.transfer(balance);
+
+        emit EventWithdraw(msg.sender, balance);   
+}
 }
