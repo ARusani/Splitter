@@ -25,36 +25,47 @@ contract Splitter is Ownable {
     );
 
     mapping(address => uint256) public credit;
+    bool public stopped;
+
+    modifier notStopped {
+        require(!stopped);
+        _;
+    }
 
     constructor () public {
         emit EventSplitterCreated(msg.sender);
     }
 
+    function stop() public notStopped onlyOwner {
+        stopped = true;
+
+        emit EventStopped(msg.sender);
+    }
+
     // whenever Alice sends ether to the contract for it to be split, 
     // half of it goes to Bob and the other half to Carol. 
-    function splitEthers(address beneficiary1, address beneficiary2) public onlyOwner payable {
+    function splitEthers(address beneficiary1, address beneficiary2) public notStopped payable {
         require(msg.value != 0, "Send zero Ether is not allowed");
         require(beneficiary1 != address(0), "First beneficiary Address can not be null" );
         require(beneficiary2 != address(0), "Second beneficiary Address can not be null" );
         require(beneficiary1 != beneficiary2, "Beneficiary Addresses can not be the same" );
 
+        uint256 splittedValue = msg.value.sub(remainder).div(2);
+        require(splittedValue != 0, "Can not split the amount" );
+
         uint256 remainder = msg.value.mod(2);
 
-        uint256 splittedValue = msg.value.sub(remainder).div(2);
+        credit[beneficiary1] = credit[beneficiary1].add(splittedValue);
+        credit[beneficiary2] = credit[beneficiary2].add(splittedValue);
 
-        if (splittedValue != 0) {
-            credit[beneficiary1] = credit[beneficiary1].add(splittedValue);
-            credit[beneficiary2] = credit[beneficiary2].add(splittedValue);
-
-            emit EventEtherSplitted(msg.sender,beneficiary1, beneficiary2, splittedValue, remainder);
-        }   
+        emit EventEtherSplitted(msg.sender,beneficiary1, beneficiary2, splittedValue, remainder);   
         
         if (remainder != 0) {
             msg.sender.transfer(remainder);
         }
     }
 
-    function withdraw() public {
+    function withdraw() public notStopped {
         uint256 aCredit = credit[msg.sender];
 
         require(aCredit != 0);
