@@ -42,16 +42,16 @@ contract Splitter is Ownable {
 
         uint256 splittedValue = msg.value.sub(remainder).div(2);
 
-        if (remainder != 0) {
-            credit[msg.sender] = credit[msg.sender].add(remainder);
-        }
-
         if (splittedValue != 0) {
             credit[beneficiary1] = credit[beneficiary1].add(splittedValue);
             credit[beneficiary2] = credit[beneficiary2].add(splittedValue);
 
             emit EventEtherSplitted(msg.sender,beneficiary1, beneficiary2, splittedValue, remainder);
         }   
+        
+        if (remainder != 0) {
+            msg.sender.transfer(remainder);
+        }
     }
 
     function withdraw() public {

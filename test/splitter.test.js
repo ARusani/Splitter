@@ -16,7 +16,7 @@ const Splitter = artifacts.require('Splitter.sol');
 contract('Splitter', function(accounts) {
   const MAX_GAS = '4700000';
 
-  let coinbase; let alice; let bob; let carol;
+  let coinbase, alice, bob, carol;
   before('checking accounts', async () => {
     assert.isAtLeast(accounts.length, 5, 'not enough accounts');
 
@@ -83,16 +83,14 @@ contract('Splitter', function(accounts) {
               result.logs[0].args.splittedValue.should.be.eq.BN(halfExpected);
               result.logs[0].args.remainder.should.be.eq.BN(remExpected);
 
-              const balanceAlice = await splitterInstance.credit(alice);
               const balanceBob = await splitterInstance.credit(bob);
               const balanceCarol = await splitterInstance.credit(carol);
 
-              balanceAlice.should.be.eq.BN(remExpected);
               balanceBob.should.be.eq.BN(halfExpected);
               balanceCarol.should.be.eq.BN(halfExpected);
             });
           });
-          
+
           it('split amounts correctly two times', async () => {
             const value = amounts[2];
             await splitterInstance.splitEthers( bob, carol,
