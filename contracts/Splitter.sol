@@ -24,11 +24,24 @@ contract Splitter is Ownable {
         uint256 balance
     );
 
-    mapping(address => uint256) public credit;
-    bool public stopped;
+    event EventStopped(
+        address indexed caller
+    );
 
-    modifier notStopped {
+    event EventUnStopped(
+        address indexed caller
+    );
+
+    mapping(address => uint256) public credit;
+    bool private stopped;
+
+    modifier notStopped() {
         require(!stopped);
+        _;
+    }
+
+    modifier asStopped() {
+        require(stopped);
         _;
     }
 
@@ -36,24 +49,30 @@ contract Splitter is Ownable {
         emit EventSplitterCreated(msg.sender);
     }
 
-    function stop() public notStopped onlyOwner {
+    function stop() public onlyOwner notStopped  {
         stopped = true;
 
         emit EventStopped(msg.sender);
     }
 
-    // whenever Alice sends ether to the contract for it to be split, 
-    // half of it goes to Bob and the other half to Carol. 
+    function unStop() public onlyOwner asStopped {
+        stopped = false;
+        emit EventUnStopped(msg.sender);
+    }
+
+    function isStopped() public view returns (bool) {
+        return stopped;
+    }    
+
     function splitEthers(address beneficiary1, address beneficiary2) public notStopped payable {
         require(msg.value != 0, "Send zero Ether is not allowed");
         require(beneficiary1 != address(0), "First beneficiary Address can not be null" );
         require(beneficiary2 != address(0), "Second beneficiary Address can not be null" );
         require(beneficiary1 != beneficiary2, "Beneficiary Addresses can not be the same" );
 
+        uint256 remainder = msg.value.mod(2);
         uint256 splittedValue = msg.value.sub(remainder).div(2);
         require(splittedValue != 0, "Can not split the amount" );
-
-        uint256 remainder = msg.value.mod(2);
 
         credit[beneficiary1] = credit[beneficiary1].add(splittedValue);
         credit[beneficiary2] = credit[beneficiary2].add(splittedValue);

@@ -16,7 +16,7 @@ const Splitter = artifacts.require('Splitter.sol');
 contract('Splitter', function(accounts) {
   const MAX_GAS = '4700000';
 
-  let coinbase, alice, bob, carol;
+  let coinbase; let alice; let bob; let carol;
   before('checking accounts', async () => {
     assert.isAtLeast(accounts.length, 5, 'not enough accounts');
 
@@ -50,13 +50,18 @@ contract('Splitter', function(accounts) {
     });
 
     describe('Test Splitter Instance methods:', () => {
-      let splitterInstance;
+      let splitterInstance; let splitterInstanceOne;
 
       const amounts = [web3.utils.toWei('0.0001', 'ether'),
         web3.utils.toWei('100', 'szabo'),
         web3.utils.toWei('1', 'finney'),
         web3.utils.toWei('0.000000009', 'gwei'),
       ];
+
+      before('should deploy Splitter instance', async () => {
+        splitterInstanceOne = await Splitter.new(
+            {from: alice}).should.be.fulfilled;
+      });
 
       beforeEach('should deploy Splitter instance', async () => {
         splitterInstance = await Splitter.new(
@@ -91,36 +96,42 @@ contract('Splitter', function(accounts) {
             });
           });
 
-          it('split amounts correctly two times', async () => {
-            const value = amounts[2];
-            await splitterInstance.splitEthers( bob, carol,
-                {from: alice, value: value, gas: MAX_GAS})
-                .should.be.fulfilled;
+          const values = [
+            {'beneficiary1': accounts[0], 'beneficiary2': accounts[1], 'amount': amounts[1], 'sender': accounts[2]},
+            {'beneficiary1': accounts[1], 'beneficiary2': accounts[2], 'amount': amounts[2], 'sender': accounts[0]},
+            {'beneficiary1': accounts[1], 'beneficiary2': accounts[2], 'amount': amounts[2], 'sender': accounts[1]},
+          ];
 
-            await splitterInstance.splitEthers( bob, carol,
-                {from: alice, value: value, gas: MAX_GAS})
-                .should.be.fulfilled;
+          values.forEach(function(value) {
+            it('split amounts correctly', async () => {
+              const balanceBeforeB1 = await splitterInstanceOne.credit(value.beneficiary1);
+              const balanceBeforeB2 = await splitterInstanceOne.credit(value.beneficiary2);
 
-            const valueBN = new BN(value);
+              await splitterInstanceOne.splitEthers( value.beneficiary1, value.beneficiary2,
+                  {from: value.sender, value: value.amount, gas: MAX_GAS})
+                  .should.be.fulfilled;
 
-            const creditExpected = valueBN.div(new BN('2')).mul(new BN('2'));
-            const remExpected = valueBN.mod(new BN('2')).mul(new BN('2'));
+              const valueBN = new BN(value.amount);
 
-            const balanceAlice = await splitterInstance.credit(alice);
-            const balanceBob = await splitterInstance.credit(bob);
-            const balanceCarol = await splitterInstance.credit(carol);
+              // check for value 1
+              const creditExpected = valueBN.div(new BN('2'));
 
-            balanceAlice.should.be.eq.BN(remExpected);
-            balanceBob.should.be.eq.BN(creditExpected);
-            balanceCarol.should.be.eq.BN(creditExpected);
+              const balanceB1 = await splitterInstanceOne.credit(value.beneficiary1);
+              const balanceB2 = await splitterInstanceOne.credit(value.beneficiary2);
+
+              balanceB1.should.be.eq.BN(balanceBeforeB1.add(creditExpected));
+              balanceB2.should.be.eq.BN(balanceBeforeB2.add(creditExpected));
+            });
           });
         });
 
         describe('fails', () => {
-          it('if not called by owner ', async () => {
+          it('if called in Stopped state ', async () => {
+            await splitterInstance.stop({from: alice});
+
             await web3.eth.expectedExceptionPromise(() => {
               return splitterInstance.splitEthers( alice, carol,
-                  {from: bob, value: amounts[0], gas: MAX_GAS});
+                  {from: alice, value: amounts[0], gas: MAX_GAS});
             }, MAX_GAS);
           });
 
@@ -155,12 +166,15 @@ contract('Splitter', function(accounts) {
       });
 
       describe('#withdraw()', () => {
-        it('should allow withdraw and emit EventWithdraw', async () => {
-          const value = amounts[2];
+        const value = amounts[2];
 
+        beforeEach('Split some amount', async () => {
           await splitterInstance.splitEthers( bob, carol,
               {from: alice, value: value, gas: MAX_GAS})
               .should.be.fulfilled;
+        });
+
+        it('should allow withdraw and emit EventWithdraw', async () => {
 
           const valueBN = new BN(value);
 
@@ -193,11 +207,6 @@ contract('Splitter', function(accounts) {
         });
 
         it('should fail withdraws two times', async () => {
-
-          await splitterInstance.splitEthers( bob, carol,
-              {from: alice, value: amounts[2], gas: MAX_GAS})
-              .should.be.fulfilled;
-
           await splitterInstance.withdraw({from: bob, gas: MAX_GAS})
               .should.be.fulfilled;
 
