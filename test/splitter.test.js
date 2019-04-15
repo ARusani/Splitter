@@ -3,7 +3,7 @@
 web3.eth.getTransactionReceiptMined = require('../gistLepretre/getTransactionReceiptMined.js');
 web3.eth.expectedExceptionPromise = require('../gistLepretre/expected_exception_testRPC_and_geth.js');
 
-const BN = web3.utils.BN;
+const {BN, toWei, sha3} = web3.utils;
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 require('chai')
@@ -42,7 +42,7 @@ contract('Splitter', function(accounts) {
 
         receipt.logs.length.should.be.equal(2);
         const logEventSplitterCreted = receipt.logs[1];
-        logEventSplitterCreted.topics[0].should.be.equal(web3.utils.sha3('EventSplitterCreated(address)'));
+        logEventSplitterCreted.topics[0].should.be.equal(sha3('EventSplitterCreated(address)'));
 
         // Oops it looks like this functionality has been removed!
         /* const formattedEvent = splitterInstance.EventSplitterCreated().formatter(logEventSplitterCreted); */
@@ -52,10 +52,11 @@ contract('Splitter', function(accounts) {
     describe('Test Splitter Instance methods:', () => {
       let splitterInstance; let splitterInstanceOne;
 
-      const amounts = [web3.utils.toWei('0.0001', 'ether'),
-        web3.utils.toWei('100', 'szabo'),
-        web3.utils.toWei('1', 'finney'),
-        web3.utils.toWei('0.000000009', 'gwei'),
+      const amounts = [
+        {amount: toWei('0.0001', 'ether'), half: toWei('0.00005', 'ether'), rem: '0'},
+        {amount: toWei('100', 'szabo'), half: toWei('50', 'szabo'), rem: '0'},
+        {amount: toWei('1', 'finney'), half: toWei('0.5', 'finney'), rem: '0'},
+        {amount: toWei('0.000000009', 'gwei'), half: toWei('0.000000004', 'gwei'), rem: toWei('0.000000001', 'gwei')},
       ];
 
       before('should deploy Splitter instance', async () => {
@@ -73,33 +74,28 @@ contract('Splitter', function(accounts) {
           amounts.forEach(function(value) {
             it('split amounts to beneficiary1 and beneficiary2, remainder to the owner', async () => {
               const result = await splitterInstance.splitEthers( bob, carol,
-                  {from: alice, value: value, gas: MAX_GAS});
-
-              const valueBN = new BN(value);
-
-              const halfExpected = valueBN.div(new BN('2'));
-              const remExpected = valueBN.mod(new BN('2'));
+                  {from: alice, value: value.amount, gas: MAX_GAS});
 
               result.logs.length.should.be.equal(1);
               result.logs[0].event.should.be.equal('EventEtherSplitted');
               result.logs[0].args.caller.should.be.equal(alice);
               result.logs[0].args.beneficiary1.should.be.equal(bob);
               result.logs[0].args.beneficiary2.should.be.equal(carol);
-              result.logs[0].args.splittedValue.should.be.eq.BN(halfExpected);
-              result.logs[0].args.remainder.should.be.eq.BN(remExpected);
+              result.logs[0].args.splittedValue.should.be.eq.BN(value.half);
+              result.logs[0].args.remainder.should.be.eq.BN(value.rem);
 
               const balanceBob = await splitterInstance.credit(bob);
               const balanceCarol = await splitterInstance.credit(carol);
 
-              balanceBob.should.be.eq.BN(halfExpected);
-              balanceCarol.should.be.eq.BN(halfExpected);
+              balanceBob.should.be.eq.BN(value.half);
+              balanceCarol.should.be.eq.BN(value.half);
             });
           });
 
           const values = [
-            {'beneficiary1': accounts[0], 'beneficiary2': accounts[1], 'amount': amounts[1], 'sender': accounts[2]},
-            {'beneficiary1': accounts[1], 'beneficiary2': accounts[2], 'amount': amounts[2], 'sender': accounts[0]},
-            {'beneficiary1': accounts[1], 'beneficiary2': accounts[2], 'amount': amounts[2], 'sender': accounts[1]},
+            {'beneficiary1': accounts[0], 'beneficiary2': accounts[1], 'amount': amounts[1].amount, 'sender': accounts[2]},
+            {'beneficiary1': accounts[1], 'beneficiary2': accounts[2], 'amount': amounts[2].amount, 'sender': accounts[0]},
+            {'beneficiary1': accounts[1], 'beneficiary2': accounts[2], 'amount': amounts[2].amount, 'sender': accounts[1]},
           ];
 
           values.forEach(function(value) {
@@ -131,21 +127,21 @@ contract('Splitter', function(accounts) {
 
             await web3.eth.expectedExceptionPromise(() => {
               return splitterInstance.splitEthers( alice, carol,
-                  {from: alice, value: amounts[0], gas: MAX_GAS});
+                  {from: alice, value: amounts[0].amount, gas: MAX_GAS});
             }, MAX_GAS);
           });
 
           it('if first beneficiary is address(0)', async () => {
             await web3.eth.expectedExceptionPromise(() => {
               return splitterInstance.splitEthers( ZERO_ADDRESS, carol,
-                  {from: alice, value: amounts[0], gas: MAX_GAS});
+                  {from: alice, value: amounts[0].amount, gas: MAX_GAS});
             }, MAX_GAS);
           });
 
           it('if second beneficiary is address(0)', async () => {
             await web3.eth.expectedExceptionPromise(() => {
               return splitterInstance.splitEthers( bob, ZERO_ADDRESS,
-                  {from: alice, value: amounts[0], gas: MAX_GAS});
+                  {from: alice, value: amounts[0].amount, gas: MAX_GAS});
             }, MAX_GAS);
           });
 
@@ -159,14 +155,14 @@ contract('Splitter', function(accounts) {
           it('if address of first beneficiary is equal to second', async () => {
             await web3.eth.expectedExceptionPromise(() => {
               return splitterInstance.splitEthers( bob, bob,
-                  {from: alice, value: amounts[0], gas: MAX_GAS});
+                  {from: alice, value: amounts[0].amount, gas: MAX_GAS});
             }, MAX_GAS);
           });
         });
       });
 
       describe('#withdraw()', () => {
-        const value = amounts[2];
+        const value = amounts[2].amount;
 
         beforeEach('Split some amount', async () => {
           await splitterInstance.splitEthers( bob, carol,
@@ -221,7 +217,7 @@ contract('Splitter', function(accounts) {
           it(`should revert called from  (${address}) address`, async () => {
             await web3.eth.expectedExceptionPromise(() => {
               return splitterInstance.sendTransaction(
-                  {from: address, value: amounts[0], gas: MAX_GAS});
+                  {from: address, value: amounts[0].amount, gas: MAX_GAS});
             }, MAX_GAS);
           });
         });

@@ -1,3 +1,4 @@
+/* eslint-disable require-jsdoc */
 if (typeof web3 !== 'undefined') {
   web3 = new Web3(web3.currentProvider);
 } else {
@@ -253,29 +254,27 @@ SplitterInstance.EventWithdraw({}, 'latest').watch(function(error, result) {
 function refreshBalance() {
   web3.eth.getBalance( SplitterAddress, function(error, result) {
     if (!error) {
-      $('#contractBalance').html('<h2 id="contractBalance">' + result.toString() + ' Total Eheters in the contract</h2>');
+      $('#contractBalance').html(result.toString() + ' Total Eheters in the contract');
+
       console.log(result.toString());
     } else {
       console.error(error);
     }
   });
 
+  const addesses = [
+    {'address': bob, 'tag': '#bobBalance'},
+    {'address': carol, 'tag': '#carolBalance'},
+  ];
 
-  SplitterInstance.credit.call(bob, function(error, result) {
-    if (!error) {
-      $('#bobBalance').html('<p id="bobBalance">' + result.toString() + '</p>');
-      console.log(result.toString());
-    } else {
-      console.error(error);
-    }
-  });
-
-  SplitterInstance.credit.call(carol, function(error, result) {
-    if (!error) {
-      $('#carolBalance').html('<p id="carolBalance">' + result.toString() + '</p>');
-      console.log(result.toString());
-    } else {
-      console.error(error);
-    }
+  addesses.forEach(function(anAddress) {
+    SplitterInstance.credit.call(anAddress.address, function(error, result) {
+      if (!error) {
+        $(anAddress.tag).html(result.toString());
+        console.log(result.toString());
+      } else {
+        console.error(error);
+      }
+    });
   });
 };
