@@ -4,14 +4,11 @@
 web3.eth.getTransactionReceiptMined = require('../gistLepretre/getTransactionReceiptMined.js');
 web3.eth.expectedExceptionPromise = require('../gistLepretre/expected_exception_testRPC_and_geth.js');
 
-const {BN, toWei, sha3} = web3.utils;
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
-
 require('chai')
     .use(require('chai-as-promised'))
     .should();
 
-const Stoppable = artifacts.require('Stoppable.sol');
+const Stoppable = artifacts.require('StoppableMock.sol');
 
 contract('Stoppable', function(accounts) {
   const MAX_GAS = '4700000';
@@ -56,14 +53,14 @@ contract('Stoppable', function(accounts) {
             result.logs.length.should.be.equal(1);
             result.logs[0].event.should.be.equal('EventStopped');
 
-            const isStopped = await stoppableInstance.stopped();
+            const isStopped = await stoppableInstance.isStopped();
             isStopped.should.be.true;
           });
 
           it('if owner unStop stopped contact', async () => {
             await stoppableInstanceStopped.unStop({from: owner})
                 .should.be.fulfilled;
-            const result = await stoppableInstance.stopped();
+            const result = await stoppableInstance.isStopped();
             result.should.be.false;
           });
         });
@@ -74,7 +71,7 @@ contract('Stoppable', function(accounts) {
               return stoppableInstanceStopped.stop({from: owner});
             }, MAX_GAS);
 
-            const isStopped = await stoppableInstanceStopped.stopped();
+            const isStopped = await stoppableInstanceStopped.isStopped();
             isStopped.should.be.true;
           });
 
@@ -83,7 +80,7 @@ contract('Stoppable', function(accounts) {
               return stoppableInstance.unStop({from: owner});
             }, MAX_GAS);
 
-            const result = await stoppableInstance.stopped();
+            const result = await stoppableInstance.isStopped();
             result.should.be.false;
           });
 
@@ -92,7 +89,7 @@ contract('Stoppable', function(accounts) {
               return stoppableInstance.stop({from: user1});
             }, MAX_GAS);
 
-            const isStopped = await stoppableInstance.stopped();
+            const isStopped = await stoppableInstance.isStopped();
             isStopped.should.be.false;
           });
 
@@ -101,7 +98,7 @@ contract('Stoppable', function(accounts) {
               return stoppableInstanceStopped.unStop({from: user1});
             }, MAX_GAS);
 
-            const result = await stoppableInstanceStopped.stopped();
+            const result = await stoppableInstanceStopped.isStopped();
             result.should.be.true;
           });
         });

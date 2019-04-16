@@ -1,17 +1,23 @@
 /* eslint-disable one-var */
 /* eslint-disable require-jsdoc */
 
-window.onload = async function() {
+//window.onload = async () => {
+window.addEventListener('load', async () => {
   if (typeof web3 !== 'undefined') {
-    web3 = new Web3(web3.currentProvider);
+    window.web3 = new Web3(web3.currentProvider);
   } else {
-    web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:9545'));
+    window.web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:9545'));
   }
 
-  console.log(web3.eth)
-  var alice, bob, carol, accounts;
-  accounts = await web3.eth.getAccounts();
-  console.log('Attempting to deploy from account', await web3.eth.getAccounts());
+  console.log(window.web3.version.api)
+  let alice, bob, carol; 
+  const accounts = window.web3.eth.accounts[0]
+  console.log('Attempting to deploy from account', accounts);
+  
+  const balance = await web3.eth.getBalance(accounts[0]);
+  console.log("balance", web3.utils.fromWei(balance, "ether"));
+
+
 
   const SplitterContract = web3.eth.contract([
     {
@@ -280,4 +286,4 @@ window.onload = async function() {
       });
     });
   };
-};
+});

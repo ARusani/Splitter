@@ -7,7 +7,7 @@ contract Stoppable is Ownable {
     event EventStopped(address indexed caller);
     event EventUnStopped(address indexed caller);
 
-    bool public stopped;
+    bool private stopped;
 
     modifier notStopped() {
         require(!stopped);
@@ -19,7 +19,7 @@ contract Stoppable is Ownable {
         _;
     }
 
-    constructor () public {
+    constructor () internal {
     }
 
     function stop() public onlyOwner notStopped  {
@@ -33,4 +33,7 @@ contract Stoppable is Ownable {
         emit EventUnStopped(msg.sender);
     }
 
+    function isStopped() public view returns (bool) {
+        return stopped;
+    }
 }
