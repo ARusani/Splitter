@@ -19,7 +19,8 @@ contract Stoppable is Ownable {
         _;
     }
 
-    constructor () internal {}
+    constructor () public {
+    }
 
     function stop() public onlyOwner notStopped  {
         stopped = true;
@@ -32,7 +33,4 @@ contract Stoppable is Ownable {
         emit EventUnStopped(msg.sender);
     }
 
-    function isStopped() public view returns (bool) {
-        return stopped;
-    }    
 }

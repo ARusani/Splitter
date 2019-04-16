@@ -1,3 +1,6 @@
+/* eslint-disable new-cap */
+/* eslint-disable max-len */
+/* eslint-disable one-var */
 'use strict';
 
 web3.eth.getTransactionReceiptMined = require('../gistLepretre/getTransactionReceiptMined.js');
@@ -16,7 +19,7 @@ const Splitter = artifacts.require('Splitter.sol');
 contract('Splitter', function(accounts) {
   const MAX_GAS = '4700000';
 
-  let coinbase; let alice; let bob; let carol;
+  let coinbase, alice, bob, carol;
   before('checking accounts', async () => {
     assert.isAtLeast(accounts.length, 5, 'not enough accounts');
 
@@ -50,7 +53,7 @@ contract('Splitter', function(accounts) {
     });
 
     describe('Test Splitter Instance methods:', () => {
-      let splitterInstance; let splitterInstanceOne;
+      let splitterInstance, splitterInstanceOne;
 
       const amounts = [
         {amount: toWei('0.0001', 'ether'), half: toWei('0.00005', 'ether'), rem: '0'},
@@ -158,11 +161,20 @@ contract('Splitter', function(accounts) {
                   {from: alice, value: amounts[0].amount, gas: MAX_GAS});
             }, MAX_GAS);
           });
+
+          it('if amount send is not divisible by 2', async () => {
+            await web3.eth.expectedExceptionPromise(() => {
+              return splitterInstance.splitEthers( bob, carol,
+                  {from: alice, value: toWei('0.000000001', 'gwei'), gas: MAX_GAS});
+            }, MAX_GAS);
+          });
+
         });
       });
 
       describe('#withdraw()', () => {
         const value = amounts[2].amount;
+        const halfExpected = new BN(amounts[2].half);
 
         beforeEach('Split some amount', async () => {
           await splitterInstance.splitEthers( bob, carol,
@@ -171,11 +183,6 @@ contract('Splitter', function(accounts) {
         });
 
         it('should allow withdraw and emit EventWithdraw', async () => {
-
-          const valueBN = new BN(value);
-
-          const halfExpected = valueBN.div(new BN('2'));
-
           const preBobBalance = new BN(await web3.eth.getBalance(bob));
 
           const result = await splitterInstance.withdraw({from: bob, gas: MAX_GAS});
@@ -190,7 +197,7 @@ contract('Splitter', function(accounts) {
           const totalGas = gasPriceWithdrawFunds.mul(gasUsedWithdrawFunds);
 
           const postBobBalance = new BN(await web3.eth.getBalance(bob));
-          postBobBalance.should.be.eq.BN(preBobBalance.sub(totalGas).add(halfExpected));
+          postBobBalance.should.be.eq.BN(preBobBalance.add(halfExpected).sub(totalGas));
 
           const bobCreditLeft = await splitterInstance.credit(bob);
           bobCreditLeft.should.be.eq.BN(0);
